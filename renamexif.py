@@ -49,26 +49,10 @@ def generate_filename(exif):
         long = float(((((east[0] * 60) + east[1]) * 60) + east[2]) / 60 / 60)
 
 
-
         # Neither Nominatim nor GeoNames deliver sufficient good location names so I leave both options included to make a quick change possible
+        #loc_name = geocode_nominatim(lat, long)
+        loc_name = geocode_geonames(lat, long)
 
-
-        # Nominatim
-        #geoLoc = Nominatim(user_agent="GetLoc")
-        #locname = geoLoc.reverse(f"{lat}, {long}", zoom=11)
-        #loc_name = str(locname.address).partition(",")[0]
-
-        # For debugging purposes
-        #print(f"Nominatim: {loc_name}")
-
-
-        # GeoNames
-        geo = GeoNames(username="dmfiz")
-        location = geo.reverse(query=(lat, long), exactly_one=True, timeout=5, lang="local", find_nearby_type="findNearbyPlaceName")
-        loc_name = str(location).partition(",")[0]
-
-        # For debugging purposes
-        #print(f"GeoNames: {location_name}")
 
     # In case of KeyError we define loc_name manually as None
     except KeyError:
@@ -89,6 +73,30 @@ def generate_filename(exif):
         return f"img_{camera_model}_{date_taken}_{loc_name}.jpg"
     elif args.model and loc_name is None:
         return f"img_{camera_model}_{date_taken}.jpg"
+
+
+def geocode_nominatim(lat, long):
+
+    geoLoc = Nominatim(user_agent="GetLoc")
+    locname = geoLoc.reverse(f"{lat}, {long}", zoom=11)
+    loc_name = str(locname.address).partition(",")[0]
+
+    # For debugging purposes
+    #print(f"Nominatim: {loc_name}")
+
+    return loc_name
+
+
+def geocode_geonames(lat, long):
+
+    geo = GeoNames(username="dmfiz")
+    location = geo.reverse(query=(lat, long), exactly_one=True, timeout=5, lang="local", find_nearby_type="findNearbyPlaceName")
+    loc_name = str(location).partition(",")[0]
+
+    # For debugging purposes
+    #print(f"GeoNames: {location_name}")
+
+    return loc_name
 
 
 def main():
@@ -115,24 +123,30 @@ def main():
             with Image.open(file) as img:
                 img.load()
 
-                exif = {
+                try:
+                    exif = {
                     TAGS[k]: v
                     for k, v in img._getexif().items()
                     if k in TAGS
-                }
-
-                # If exif data available we proceed
-                if exif is not None:
-                    new_filename = generate_filename(exif)
-
-                    # For debugging purposes
-                    #print(file)
-                    #print(new_filename)
-
-                    # Save new image under new filename in output directory
-                    image = img.save(f"{output_path}/{new_filename}")
+                    }
 
                 # If no exif data available we skip the file
+                except AttributeError:
+                    image = img.save(f"{output_path}/{Path(file).name}")
+
+                # If exif data available we proceed
+                new_filename = generate_filename(exif)
+
+                # For debugging purposes
+                #print(file)
+                #print(new_filename)
+
+                # Save new image under new filename in output directory
+                image = img.save(f"{output_path}/{new_filename}")
+
+
+
+
     else:
         sys.exit("The input directory doesn't exist")
 
