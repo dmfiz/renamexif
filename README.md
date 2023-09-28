@@ -1,5 +1,5 @@
 # renamexif
-Rename image files based on EXIF date
+Rename image files based on EXIF data
 
 ## Usage
 usage: renamexif.py [-h] [-l | -m] input output
